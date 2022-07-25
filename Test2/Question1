@@ -119,7 +119,7 @@ public class catchErrors {
 					}
 				}
 				
-				blockchecker(fileCode, i); // verify block of the loop is also complete, this will also take care of nesed loops
+				i=blockchecker(fileCode, i); // verify block of the loop is also complete, this will also take care of nesed loops
 				
 			}
 			// assignment checker
