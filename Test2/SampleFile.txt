@@ -1,0 +1,22 @@
+VOID MAIN () {
+#switch
+#foreach
+#for
+#while
+#do-while
+#block
+#if
+#assignment
+#return
+
+	int num1 = 5 ;
+	int num2 = 15 ;
+#System.out.println("Sum of these numbers: "+sum);
+    
+    int num3 = 5 ;
+    
+    if ( i == 0 ) {
+    	print-> hello world , & num3 ;
+    } 
+      
+}
