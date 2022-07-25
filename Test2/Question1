@@ -1,2 +1,165 @@
 //Question 1 in java
 // Rules to catch lexical and syntax errors are explained in comments
+import java.io.File;  
+import java.io.FileNotFoundException; 
+import java.util.Scanner; 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.*;  
+
+public class catchErrors {
+	public static HashMap<Integer, String> fileCode = new HashMap<Integer, String>();
+	public static void main(String[] args) throws FileNotFoundException {
+		Scanner input = new Scanner(new File("SampleFile.txt"));
+		int lineNo = 1;
+		while (input.hasNextLine())
+		{
+			// Saving all the Code to fileCode, 
+			//Rule#1: in my language, anything after # will be considered comments until end of the line
+			//ignoring empty lines and any comments in the file, then saving code in hashmap
+			
+			String line = input.nextLine();
+			int i = line.indexOf("#");
+			if (i != -1) {
+				line = line.substring(0,i);
+			}
+			
+			//if (!line.trim().isEmpty()) { // ignoring empty lines and replacing double space to 1 space
+				fileCode.put(lineNo++, line.replace("  ", " ").trim());
+			//}
+		}
+		
+		ArrayList<String> tempList;
+		
+		//in my code, very first line is must be a void main method and start of block
+		//Verify that the file is started correctly with "VOID MAIN () {"
+		tempList = new ArrayList<String>( Arrays.asList(fileCode.get(1).split(" ")));
+		if (tempList.get(0).equals("VOID") && tempList.get(1).equals("MAIN") && tempList.get(2).equals("()") &&
+				tempList.get(3).equals("{")) {
+			blockchecker(fileCode, 1);  //if file is started correctly with void main method. then start validation of block
+			
+		} else {
+			syntaxError(fileCode.get(1), 1, "Code must start with \"VOID MAIN () {\"");
+			
+		}
+		
+	}
+	
+	
+	public static void lexicalAnalyzer(ArrayList code, int line) {
+		Boolean a;
+		String[] keywords = {"int", "VOID", "MAIN", "switch", "foreach", "for", "while", "do-while", "if",  "return", "print->"};
+		String regex = "^[a-zA-Z][a-zA-Z_0-9]*$";
+		String[] Other = {"!", "@", "#", "%", "&", "*", "(", ")", "()", "-", "+", "=", "==", "{", "}", "[]", "/", "\"", ";",":", "\'", "<", ",", ">", ".","=" , "*=" , "/=" , "%=" , "+="  , "-=" , "<<=" , ">>="  , ">>>="  , "&=" , "^=" , "|="};
+		int size = code.size();
+		for(int i=0; i<size; i++) {
+			a = false;
+			int klength = keywords.length;
+			for(int j=0; j<klength; j++) {
+				if(code.get(i).equals(keywords[j])) {
+				a = true;
+				break;
+				}
+			}
+			if(((String) code.get(i)).matches(regex) && a == false) {
+				a = true;
+			}
+			else {
+				int olength = Other.length;
+				for(int j=0; j<olength; j++) {
+					if( code.get(i).equals(Other[j]) || ((String) code.get(i)).matches("[0-9]+")) {
+					a = true;
+					break;
+					}
+				}
+				if (a == false) {
+					lexicalError(fileCode.get(line), line);
+				}
+				}
+			}
+	}
+	
+	public static int blockchecker(HashMap<Integer, String> fileCode, int lineno) {
+		//allowed loop keywords 
+		ArrayList<String> loopKeywords = new ArrayList<String> ();
+		loopKeywords.add("for"); loopKeywords.add("foreach");loopKeywords.add("while");loopKeywords.add("do-while");loopKeywords.add("switch");loopKeywords.add("if");
+		
+		//verify the block has started with open {
+		if (!fileCode.get(lineno).endsWith("{")) {
+			syntaxError(fileCode.get(lineno), lineno, "opening \"{\" not found" );			
+		}
+		
+		ArrayList<String> tempList;
+		for(int i=lineno+1; i<=fileCode.size(); i++) {
+			// saving one line of code in arraylist as tokens
+			if (!fileCode.get(i).isEmpty()) {//ignoring empty lines in file
+			tempList = new ArrayList<String>( Arrays.asList(fileCode.get(i).split(" ")));
+			//Check each line of code for lexical errors
+			lexicalAnalyzer(tempList, i);
+			
+			
+			//new nested block can be only start with any loopKeywords (for, while, switch, if, ..) else any new starting block will be invalid
+			if ((tempList.contains("{") &&  !loopKeywords.contains(tempList.get(0)))
+					|| (tempList.contains("}") && !fileCode.get(i).endsWith("}"))) {
+				syntaxError(fileCode.get(i), i, "invalid opening or closing of block found");
+			} 
+			//Validate loops, check loop has some expressions and check the block of loop is complete
+			else if (loopKeywords.contains(tempList.get(0))) {
+				//validating loop has some expression
+				int exp_start = fileCode.get(i).indexOf("(");
+				int exp_end = fileCode.get(i).indexOf(")");
+				if (exp_start == -1 || exp_end == -1 || exp_start> exp_end) { // checking open and closing () are in expression
+					syntaxError(fileCode.get(i), i, "invalid expression/condition found");
+				} else {
+					String exp = fileCode.get(i).substring(exp_start, exp_end+1);
+					if (!exp.matches("\\((.+?)\\)")) { //checking there is something is in expression
+						syntaxError(fileCode.get(i), i, "invalid expression/condition found");
+					}
+				}
+				
+				blockchecker(fileCode, i); // verify block of the loop is also complete, this will also take care of nesed loops
+				
+			}
+			// assignment checker
+			//if int is declared verify that assignment is also done
+			else if (tempList.get(0).equals("int")) {
+				if (tempList.size() < 5 || tempList.get(1).length() == 0 || !tempList.get(2).equals("=")
+					|| !tempList.get(3).matches("[0-9]+") || !tempList.get(4).equals(";")) {
+					syntaxError(fileCode.get(i), i, "invalid assignment found");
+				}
+				//once closing bracket "}" of the block is found then exit
+			} else if  (fileCode.get(i).endsWith("}")) {
+				return i+1;
+			} else if (!fileCode.get(i).endsWith(";")) {
+				syntaxError(fileCode.get(i), i, "line not ended properly");
+			}
+			
+			//System.out.println(tempList);
+			
+			}
+		}
+		
+		
+		syntaxError(fileCode.get(lineno), lineno, "closing \"}\" of block not found" );
+		return lineno;
+		
+	}
+	
+	public static void lexicalError(String code, int lineno) {
+		System.out.println("lexical error found at line No: " + lineno +" - line: \""+code+"\"");
+		System.out.println("----Please correct that error and run program again to continue----");
+		System.out.println("----Terminating Program----");
+		System.exit(0);
+		
+	}
+	public static void syntaxError(String code, int lineno, String errormsg) {
+		System.out.println("Syntax error found at line No: " + lineno +" - line: \""+code+"\"");
+		System.out.println("Error message: " + errormsg);
+		System.out.println("----Please correct that error and run program again to continue----");
+		System.out.println("----Terminating Program----");
+		System.exit(0);
+	}
+	
+}
