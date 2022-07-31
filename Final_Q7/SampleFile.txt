@@ -1,0 +1,13 @@
+?My program processes lexemes of this file and returns an ordered arraylist of tokens
+	{
+	
+	String @array ;
+	String %hash ;
+
+	float $_num1 = 0.5 ;
+	String $_s = "Hello" ;
+	char $_c =  'A' ;
+	
+	int $num2 = 4 + 6 ;
+      
+}
